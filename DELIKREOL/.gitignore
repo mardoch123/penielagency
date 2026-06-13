@@ -26,18 +26,3 @@ playwright-report
 .bashrc
 .bash_logout
 .profile
-
-# Build output
-dist/
-
-# Audit reports (generated)
-reports/
-
-# WhatsApp exported media (originals kept locally)
-public/vendors/**/IMG-*
-
-# wrangler files
-.wrangler
-.dev.vars*
-!.dev.vars.example
-!.env.example
