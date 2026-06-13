@@ -44,6 +44,7 @@ const PartnerAccessPage = lazy(() => import('./pages/new/PartnerAccessPage'));
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const MesCommandesPage = lazy(() => import('./pages/new/MesCommandesPage'));
 
 const basePath = import.meta.env.VITE_BASE_PATH || import.meta.env.BASE_URL || '/';
 
@@ -100,6 +101,7 @@ export function AppRouter() {
                   <Route path="livraison" element={<LivraisonPage />} />
                   <Route path="pro" element={<ProSpacePage />} />
                   <Route path="statut-commande" element={<OrderStatusPage />} />
+                  <Route path="mes-commandes" element={<MesCommandesPage />} />
                   {/* Partenaire */}
                   <Route path="partenaire" element={<PartnerAccessPage />} />
                   {/* Pages légales */}

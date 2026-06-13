@@ -1,71 +1,114 @@
-// WhatsApp — DELIKREOL
-// Canal de SUPPORT uniquement.
-// La commande principale passe par le site et Supabase.
-// WhatsApp sert uniquement pour :
-// - aide si le client est bloqué
-// - suivi d'une commande déjà créée
-// - question partenaire/livreur/point relais
-// - problème de paiement ou livraison
+import { supabase } from '../lib/supabase';
 
-export const DELIKREOL_MAIN_WHATSAPP = import.meta.env.VITE_WHATSAPP_NUMBER || '596696653589';
+export async function sendWhatsAppNotification(
+  phoneNumber: string,
+  templateName: string,
+  variables: Record<string, string> = {}
+) {
+  try {
+    const { data: template } = await supabase
+      .from('whatsapp_templates')
+      .select('*')
+      .eq('template_name', templateName)
+      .eq('is_active', true)
+      .single();
 
-/** Génère un lien WhatsApp avec message pré-rempli */
-export function waLink(phone: string, message: string): string {
-  const clean = phone.replace(/\D/g, '');
-  return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
+    if (!template) {
+      console.error(`Template ${templateName} not found`);
+      return false;
+    }
+
+    let message = template.template_content;
+    Object.entries(variables).forEach(([key, value]) => {
+      message = message.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    });
+
+    const { error } = await supabase.functions.invoke('whatsapp-send', {
+      body: {
+        to: phoneNumber,
+        message,
+      },
+    });
+
+    if (error) {
+      console.error('Error sending WhatsApp notification:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in sendWhatsAppNotification:', error);
+    return false;
+  }
 }
 
-/** Lien WhatsApp support DELIKREOL */
-export function supportLink(orderId?: string): string {
-  const msg = orderId
-    ? `Bonjour, j'ai besoin d'aide pour ma commande ${orderId}.`
-    : 'Bonjour, j\'ai besoin d\'aide sur DELIKREOL.';
-  return waLink(DELIKREOL_MAIN_WHATSAPP, msg);
+export async function notifyOrderConfirmed(phoneNumber: string, order: any) {
+  return sendWhatsAppNotification(phoneNumber, 'order_confirmation', {
+    order_number: order.order_number,
+    total: order.total_amount.toFixed(2),
+    delivery_type: order.delivery_type === 'home_delivery' ? 'Livraison à domicile' : 'Point relais',
+    estimated_time: '30-45 min',
+  });
 }
 
-/** Message d'accueil WhatsApp — SUPPORT UNIQUEMENT */
-export const WELCOME_MESSAGE = `Bonjour, bienvenue chez DELIKREOL.
-
-Pour commander, utilisez le site.
-Ce WhatsApp sert uniquement pour :
-• aide si vous êtes bloqué
-• suivi d'une commande déjà créée
-• question partenaire/livreur/point relais
-• problème de paiement ou livraison
-
-Merci d'indiquer votre numéro de commande si vous en avez un.`;
-
-/** Message d'absence */
-export const AWAY_MESSAGE = `Merci pour votre message 🙏
-
-Nous vous répondrons dès que possible.
-
-Si vous avez besoin d'aide pour une commande existante, indiquez simplement votre numéro de commande.`;
-
-// ──────────────────────────────────────────────
-// SUPPORT — Messages pré-remplis
-// ──────────────────────────────────────────────
-
-export function supportOrderMessage(orderId: string): string {
-  return `Bonjour, j'ai besoin d'aide pour ma commande ${orderId}.`;
+export async function notifyOrderPreparing(phoneNumber: string, orderNumber: string) {
+  return sendWhatsAppNotification(phoneNumber, 'order_preparing', {
+    order_number: orderNumber,
+  });
 }
 
-export function supportPartnerMessage(partnerName: string): string {
-  return `Bonjour, je suis partenaire ${partnerName} sur DELIKREOL. J'ai besoin d'aide pour ma fiche.`;
+export async function notifyOrderReady(phoneNumber: string, orderNumber: string, message: string) {
+  return sendWhatsAppNotification(phoneNumber, 'order_ready', {
+    order_number: orderNumber,
+    message,
+  });
 }
 
-// ──────────────────────────────────────────────
-// COMPAT — Anciens exports (dépréciés, gardés pour compat)
-// ──────────────────────────────────────────────
-export function getWhatsAppBusinessLink(phone: string, message: string = '') {
-  return waLink(phone, message);
+export async function notifyDriverAssigned(
+  phoneNumber: string,
+  orderNumber: string,
+  driverName: string,
+  driverPhone: string,
+  eta: string
+) {
+  return sendWhatsAppNotification(phoneNumber, 'driver_assigned', {
+    order_number: orderNumber,
+    driver_name: driverName,
+    driver_phone: driverPhone,
+    eta,
+  });
 }
 
-export function openWhatsAppChat(phone: string = DELIKREOL_MAIN_WHATSAPP, message: string = '') {
-  window.open(waLink(phone, message), '_blank', 'noopener,noreferrer');
+export async function notifyOrderDelivered(phoneNumber: string, orderNumber: string) {
+  return sendWhatsAppNotification(phoneNumber, 'order_delivered', {
+    order_number: orderNumber,
+  });
 }
 
-export async function sendWhatsAppNotification(_phone: string, _template: string, _vars: Record<string, string> = {}) {
-  console.warn('[DELIKREOL] WhatsApp API non active. Utiliser wa.me pour le support.');
-  return false;
+export async function getWhatsAppMessages(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching WhatsApp messages:', error);
+    return [];
+  }
+}
+
+export function getWhatsAppBusinessLink(phoneNumber: string, message: string = '') {
+  const cleanNumber = phoneNumber.replace(/\D/g, '');
+  const encodedMessage = encodeURIComponent(message);
+  return `https://wa.me/${cleanNumber}${message ? `?text=${encodedMessage}` : ''}`;
+}
+
+export function openWhatsAppChat(phoneNumber: string, message: string = '') {
+  const link = getWhatsAppBusinessLink(phoneNumber, message);
+  window.open(link, '_blank');
 }

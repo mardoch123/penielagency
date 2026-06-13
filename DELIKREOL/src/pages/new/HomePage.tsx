@@ -6,6 +6,7 @@ import {
   Handshake,
   FileText,
   MessageCircle,
+  Headphones,
   ChefHat,
   Truck,
   Clock,
@@ -177,8 +178,8 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition-all text-sm"
               >
-                <MessageCircle className="w-4 h-4" fill="white" />
-                Besoin d'aide ? Support WhatsApp
+                <Headphones className="w-4 h-4" />
+                Aide & Support
               </a>
             </div>
         </div>
@@ -429,8 +430,8 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition-all hover:scale-105 shadow-lg shadow-green-200 text-lg"
             >
-              <MessageCircle className="w-5 h-5" fill="white" />
-              Support WhatsApp
+              <Headphones className="w-5 h-5" />
+              Aide & Support
             </a>
           </div>
         </div>

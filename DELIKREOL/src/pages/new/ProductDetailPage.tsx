@@ -4,7 +4,7 @@ import { mockProducts } from '../../data/mockCatalog';
 import { traiteurSpaces } from '../../data/traiteurs';
 import { useCart } from '../../contexts/CartContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Product } from '../../types';
 
 const WHATSAPP_NUMBER = '596696653589';
@@ -29,6 +29,7 @@ export function ProductDetailPage() {
   const { addItem } = useCart();
   const { showSuccess } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const detailsRef = useRef<HTMLDivElement>(null);
 
   const product = useMemo(() => {
     // Search in mock products
@@ -45,6 +46,7 @@ export function ProductDetailPage() {
   useEffect(() => {
     if (product) {
       document.title = `${product.name} — DeliKreol`;
+      setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } else {
       document.title = 'Produit introuvable — DeliKreol';
     }
@@ -86,7 +88,7 @@ export function ProductDetailPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div ref={detailsRef} className="max-w-4xl mx-auto px-4 py-8">
       <Link to="/catalogue" className="inline-flex items-center gap-2 text-primary hover:underline mb-6">
         <ArrowLeft className="w-4 h-4" />
         Retour au catalogue

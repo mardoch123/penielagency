@@ -22,11 +22,12 @@ export interface IntegrationsConfig {
 
 export const integrations: IntegrationsConfig = {
   stripe: {
-    // Stripe test mode — prêt, activé mais WhatsApp-first
+    // Stripe is no longer the primary payment path for the public pilot.
+    // We keep the entry for compatibility with existing admin screens, but default it off.
     enabled: false,
-    label: 'Stripe (test — désactivé)',
-    description: 'Mode test prêt. Activer après validation humaine.',
-    publicKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+    label: 'Stripe (désactivé)',
+    description: 'Paiement désactivé (pivot vers lien bancaire / virement)',
+    publicKey: undefined,
     status: 'pending',
   },
   qonto: {
@@ -65,11 +66,11 @@ export const integrations: IntegrationsConfig = {
     status: (import.meta.env.VITE_SHEETS_PUBLIC_URL || import.meta.env.VITE_SHEETS_ORDERS_URL || import.meta.env.VITE_SHEETS_API_URL) ? 'configured' : 'pending',
   },
   openai: {
-    enabled: false,
-    label: 'OpenAI (proxy uniquement)',
-    description: 'IA serveur/proxy uniquement. Aucune clé exposée côté frontend.',
-    apiKey: undefined,
-    status: 'pending',
+    enabled: !!import.meta.env.VITE_OPENAI_API_KEY,
+    label: 'OpenAI',
+    description: 'Intelligence artificielle et copilot admin',
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    status: import.meta.env.VITE_OPENAI_API_KEY ? 'configured' : 'pending',
   },
   crypto: {
     enabled: false,

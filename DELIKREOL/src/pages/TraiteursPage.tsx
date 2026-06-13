@@ -12,50 +12,31 @@ import {
   featuredTraiteurSpaces,
   formatEuro,
   getTraiteurSpaceBySlug,
-  normalizeSpaceSlug,
   traiteurSpaces,
 } from '@/data/traiteurs';
 import { loadTraiteurProfiles } from '@/services/traiteurProfileService';
-
-type DemoAccessConfig = {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-};
-
-const demoAccessBySlug: Record<string, DemoAccessConfig> = {
-  [normalizeSpaceSlug("Saveurs d'Afrique")]: {
-    id: 'demo_vendor_saveurs_afrique',
-    fullName: "Saveurs d'Afrique",
-    email: 'saveurs.afrique@demo.delikreol.local',
-    phone: '+596696677679',
-  },
-  [normalizeSpaceSlug('An Tjè Coco')]: {
-    id: 'demo_vendor_an_tje_coco',
-    fullName: 'An Tjè Coco',
-    email: 'antjecoco@gmail.com',
-    phone: '0696857077',
-  },
-  [normalizeSpaceSlug("Coco's Food")]: {
-    id: 'demo_vendor_cocos_food',
-    fullName: "Coco's Food",
-    email: 'cocos.food@demo.delikreol.local',
-    phone: '+596 696 25 47 20',
-  },
-};
 
 export function TraiteursPage() {
   const baseUrl = import.meta.env.BASE_URL || '/';
   const [traiteurSpacesState, setTraiteurSpacesState] = useState(traiteurSpaces);
   const [catalogSource, setCatalogSource] = useState<'local' | 'backend'>('local');
-  const [activeSlug, setActiveSlug] = useState(() => getInitialActiveSlug());
+  const [activeSlug, setActiveSlug] = useState(featuredTraiteurSpaces[0]?.slug ?? traiteurSpaces[0]?.slug ?? '');
+  const saveursDemoEmail = 'saveurs.afrique@demo.delikreol.local';
+  const saveursDemoUserId = 'demo_vendor_saveurs_afrique';
 
   useEffect(() => {
     document.title = 'DELIKREOL | Espaces traiteurs';
     upsertMeta('description', 'Découvrez les espaces traiteurs DELIKREOL avec description, prix, menu et accès commande direct.');
     upsertMeta('og:title', 'DELIKREOL | Espaces traiteurs');
     upsertMeta('og:description', 'Chaque traiteur dispose de son espace dédié avec ses plats, ses prix et ses accès commande.');
+  }, []);
+
+  useEffect(() => {
+    const vendorSlug = new URLSearchParams(window.location.search).get('vendor');
+    const vendorSpace = vendorSlug ? getTraiteurSpaceBySlug(vendorSlug) : null;
+    if (vendorSpace) {
+      setActiveSlug(vendorSpace.slug);
+    }
   }, []);
 
   useEffect(() => {
@@ -89,7 +70,7 @@ export function TraiteursPage() {
     () => traiteurSpacesState.find((space) => space.slug === activeSlug) ?? featuredTraiteurSpaces[0] ?? traiteurSpacesState[0],
     [activeSlug, traiteurSpacesState],
   );
-  const demoAccess = demoAccessBySlug[activeSpace.slug];
+  const isSaveursAfrique = activeSpace.name === "Saveurs d'Afrique";
 
   const totalItems = useMemo(() => traiteurSpacesState.reduce((sum, space) => sum + space.menuItems.length, 0), [traiteurSpacesState]);
   const lowestPrice = useMemo(() => {
@@ -101,20 +82,19 @@ export function TraiteursPage() {
     return traiteurSpacesState.length ? total / traiteurSpacesState.length : 0;
   }, [traiteurSpacesState]);
 
-  const activateDemoAccess = () => {
-    if (!demoAccess) return;
+  const activateSaveursDemoAccess = () => {
     const demoProfile = {
-      id: demoAccess.id,
-      full_name: demoAccess.fullName,
-      phone: demoAccess.phone,
+      id: saveursDemoUserId,
+      full_name: "Saveurs d'Afrique",
+      phone: '+596696677679',
       user_type: 'vendor' as const,
       avatar_url: null,
       created_at: new Date().toISOString(),
-      email: demoAccess.email,
+      email: saveursDemoEmail,
     };
 
     localStorage.setItem('delikreol_demo_profiles', JSON.stringify([demoProfile]));
-    localStorage.setItem('delikreol_demo_session', JSON.stringify({ userId: demoAccess.id, email: demoAccess.email }));
+    localStorage.setItem('delikreol_demo_session', JSON.stringify({ userId: saveursDemoUserId, email: saveursDemoEmail }));
     localStorage.setItem('delikreol_demo_override', 'true');
     window.location.href = `${baseUrl}?view=partner-documents`;
   };
@@ -218,18 +198,18 @@ export function TraiteursPage() {
                         </Button>
                       </div>
 
-                      {demoAccess && (
+                      {isSaveursAfrique && (
                         <div className="mt-5 rounded-[1.4rem] border border-white/15 bg-white/10 p-4 backdrop-blur">
                           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
                             Accès vendeur démo
                           </p>
                           <p className="mt-2 text-sm leading-6 text-white/90">
-                            Email: <span className="font-black">{demoAccess.email}</span> · Téléphone: <span className="font-black">{demoAccess.phone}</span>
+                            Email: <span className="font-black">{saveursDemoEmail}</span> · Mot de passe au choix en mode test.
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <Button
                               type="button"
-                              onClick={activateDemoAccess}
+                              onClick={activateSaveursDemoAccess}
                               className="bg-white text-[#2a190f] shadow-lg shadow-black/10 hover:bg-white/90"
                             >
                               Activer l’accès
@@ -248,29 +228,11 @@ export function TraiteursPage() {
 
                     <div className="overflow-hidden rounded-[1.5rem] border border-white/15 bg-white/10 p-3 shadow-xl backdrop-blur">
                       {activeSpace.heroImage ? (
-                        <div className="space-y-3">
-                          <div className="overflow-hidden rounded-[1.1rem] border border-white/15">
-                            <img
-                              src={activeSpace.heroImage}
-                              alt={activeSpace.name}
-                              className="aspect-[4/3] w-full object-cover"
-                            />
-                          </div>
-                          {activeSpace.galleryImages.length > 0 && (
-                            <div className="grid grid-cols-2 gap-3">
-                              {activeSpace.galleryImages.slice(0, 2).map((image, index) => (
-                                <div key={image} className="overflow-hidden rounded-[1.05rem] border border-white/15">
-                                  <img
-                                    src={image}
-                                    alt={`${activeSpace.name} - photo ${index + 1}`}
-                                    className="aspect-[4/3] w-full object-cover"
-                                    loading="lazy"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <img
+                          src={activeSpace.heroImage}
+                          alt={activeSpace.name}
+                          className="h-full min-h-[200px] w-full rounded-[1.1rem] object-cover"
+                        />
                       ) : (
                         <div className="flex min-h-[200px] items-center justify-center rounded-[1.1rem] bg-white/10">
                           <div className="text-center">
@@ -305,15 +267,10 @@ export function TraiteursPage() {
                 </div>
 
                 {activeSpace.galleryImages.length > 0 && (
-                  <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {activeSpace.galleryImages.slice(0, 3).map((image, index) => (
+                  <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2">
+                    {activeSpace.galleryImages.map((image) => (
                       <div key={image} className="overflow-hidden rounded-[1.4rem] border border-orange-100 bg-[#fffaf3] shadow-sm">
-                        <img
-                          src={image}
-                          alt={`${activeSpace.name} - galerie ${index + 1}`}
-                          className="aspect-[4/3] w-full object-cover"
-                          loading="lazy"
-                        />
+                        <img src={image} alt={activeSpace.name} className="h-44 w-full object-cover" loading="lazy" />
                       </div>
                     ))}
                   </div>
@@ -399,11 +356,6 @@ export function TraiteursPage() {
                               Téléphone: <span className="font-black text-[#2a190f]">{space.profile.contactPhone}</span>
                             </p>
                           )}
-                          {space.profile.contactEmail && (
-                            <p>
-                              Email: <span className="font-black text-[#2a190f]">{space.profile.contactEmail}</span>
-                            </p>
-                          )}
                         </div>
                       </div>
 
@@ -441,7 +393,7 @@ export function TraiteursPage() {
                       {space.menuItems.map((item) => (
                         <div key={item.name} className="overflow-hidden rounded-[1.25rem] border border-orange-100 bg-[#fffaf4] shadow-sm">
                           {item.image && (
-                            <img src={item.image} alt={item.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+                            <img src={item.image} alt={item.name} className="h-44 w-full object-cover" loading="lazy" />
                           )}
                           <div className="p-4">
                             <div className="flex items-start justify-between gap-4">
@@ -506,10 +458,4 @@ function upsertMeta(name: string, content: string) {
     document.head.appendChild(element);
   }
   element.setAttribute('content', content);
-}
-
-function getInitialActiveSlug() {
-  const vendorSlug = new URLSearchParams(window.location.search).get('vendor');
-  const vendorSpace = vendorSlug ? getTraiteurSpaceBySlug(vendorSlug) : null;
-  return vendorSpace?.slug ?? featuredTraiteurSpaces[0]?.slug ?? traiteurSpaces[0]?.slug ?? '';
 }

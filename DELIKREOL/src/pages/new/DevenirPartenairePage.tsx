@@ -83,9 +83,24 @@ const BENEFITS = [
   },
 ];
 
+type FormErrors = Partial<Record<'nomActivite' | 'nomResponsable' | 'email' | 'telephone', string>>;
+
+function validatePartnerForm(form: PartnerFormData): FormErrors {
+  const errors: FormErrors = {};
+  if (!form.nomActivite.trim()) errors.nomActivite = "Le nom de l'activité est requis.";
+  if (!form.nomResponsable.trim()) errors.nomResponsable = 'Le nom du responsable est requis.';
+  if (!form.telephone.trim() || form.telephone.replace(/\D/g, '').length < 8)
+    errors.telephone = 'Indiquez un numéro de téléphone valide (minimum 8 chiffres).';
+  if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+    errors.email = 'Veuillez entrer un email valide.';
+  return errors;
+}
+
 export default function DevenirPartenairePage() {
   const [form, setForm] = useState<PartnerFormData>(initialFormData);
   const [submitted, setSubmitted] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
   const { showSuccess } = useToast();
 
   const handleChange = (
@@ -123,6 +138,14 @@ export default function DevenirPartenairePage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
+    const errors = validatePartnerForm(form);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    setSubmitting(true);
+
     const existing = JSON.parse(localStorage.getItem('delikreol_partner_applications') || '[]');
     const entry = {
       ...form,
@@ -133,6 +156,7 @@ export default function DevenirPartenairePage() {
     existing.push(entry);
     localStorage.setItem('delikreol_partner_applications', JSON.stringify(existing));
 
+    setSubmitting(false);
     setSubmitted(true);
     showSuccess('Votre demande a bien été reçue. Nous revenons vers vous rapidement par WhatsApp.');
   };
@@ -286,10 +310,11 @@ export default function DevenirPartenairePage() {
                   type="text"
                   required
                   value={form.nomActivite}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
+                  onChange={(e) => { handleChange(e); setFormErrors(p => ({ ...p, nomActivite: undefined })); }}
+                  className={`w-full px-4 py-2.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 outline-none transition ${formErrors.nomActivite ? 'border-red-400 focus:ring-red-200' : 'border-border focus:ring-primary/30 focus:border-primary'}`}
                   placeholder="Chez Tatie Rose"
                 />
+                {formErrors.nomActivite && <p className="text-xs text-red-500">{formErrors.nomActivite}</p>}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="nomResponsable" className="block text-sm font-semibold text-foreground">
@@ -301,10 +326,11 @@ export default function DevenirPartenairePage() {
                   type="text"
                   required
                   value={form.nomResponsable}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
+                  onChange={(e) => { handleChange(e); setFormErrors(p => ({ ...p, nomResponsable: undefined })); }}
+                  className={`w-full px-4 py-2.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 outline-none transition ${formErrors.nomResponsable ? 'border-red-400 focus:ring-red-200' : 'border-border focus:ring-primary/30 focus:border-primary'}`}
                   placeholder="Rose Martin"
                 />
+                {formErrors.nomResponsable && <p className="text-xs text-red-500">{formErrors.nomResponsable}</p>}
               </div>
             </div>
 
@@ -319,10 +345,11 @@ export default function DevenirPartenairePage() {
                   type="tel"
                   required
                   value={form.telephone}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
+                  onChange={(e) => { handleChange(e); setFormErrors(p => ({ ...p, telephone: undefined })); }}
+                  className={`w-full px-4 py-2.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 outline-none transition ${formErrors.telephone ? 'border-red-400 focus:ring-red-200' : 'border-border focus:ring-primary/30 focus:border-primary'}`}
                   placeholder="0696 XX XX XX"
                 />
+                {formErrors.telephone && <p className="text-xs text-red-500">{formErrors.telephone}</p>}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="whatsapp" className="block text-sm font-semibold text-foreground">
@@ -349,11 +376,13 @@ export default function DevenirPartenairePage() {
                   id="email"
                   name="email"
                   type="email"
+                  required
                   value={form.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition"
+                  onChange={(e) => { handleChange(e); setFormErrors(p => ({ ...p, email: undefined })); }}
+                  className={`w-full px-4 py-2.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 outline-none transition ${formErrors.email ? 'border-red-400 focus:ring-red-200' : 'border-border focus:ring-primary/30 focus:border-primary'}`}
                   placeholder="rose@exemple.mq"
                 />
+                {formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="commune" className="block text-sm font-semibold text-foreground">
@@ -522,10 +551,23 @@ export default function DevenirPartenairePage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-bold text-sm transition-colors shadow-lg"
+              disabled={submitting}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed text-primary-foreground rounded-xl font-bold text-sm transition-colors shadow-lg"
             >
-              <Send size={16} />
-              Envoyer ma candidature
+              {submitting ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Validation en cours...
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  Envoyer ma candidature
+                </>
+              )}
             </button>
             <button
               type="button"

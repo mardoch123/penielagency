@@ -10,10 +10,7 @@ interface LocalProduct {
   category: string;
   description?: string;
   zone?: string;
-  available: boolean;
-  featured?: boolean;
-  ingredients?: string;
-  allergens?: string;
+  available?: boolean;
 }
 
 interface LocalProductCardProps {

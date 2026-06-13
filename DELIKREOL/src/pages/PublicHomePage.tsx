@@ -52,6 +52,7 @@ import {
   trackPublicView,
 } from '../services/metricsService';
 import { useToast } from '../contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
 type CatalogState = {
   configured: boolean;
@@ -190,7 +191,10 @@ const zoneCenterByLabel: Record<string, [number, number]> = {
   'trois-îlets': [14.5419, -61.0362],
 };
 
-const pilotDrivers: Array<{ id: string; name: string; latitude: number; longitude: number }> = [];
+const pilotDrivers = [
+  { id: 'driver-1', name: 'Livreur pilote FDF', latitude: 14.612, longitude: -61.0708 },
+  { id: 'driver-2', name: 'Livreur pilote Lamentin', latitude: 14.6074, longitude: -61.0054 },
+];
 
 function formatWhatsAppLabel(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -407,6 +411,7 @@ const defaultBusinessRequestForm: BusinessRequestForm = {
 };
 
 export function PublicHomePage() {
+  const navigate = useNavigate();
   const baseUrl = import.meta.env.BASE_URL || '/';
   const customerPath = `${baseUrl}?view=customer`;
   const proSpaceUrl = `${baseUrl}?view=pro`;
@@ -432,6 +437,7 @@ export function PublicHomePage() {
   const [fulfillmentMode, setFulfillmentMode] = useState<'delivery' | 'pickup'>('delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [deliverySlot, setDeliverySlot] = useState('');
@@ -784,20 +790,6 @@ export function PublicHomePage() {
     [customerMapsLabel, deliveryAddress, deliveryNotes, deliverySlotLabel, orderNumber, selectedProducts, selectionEconomics.total_client],
   );
 
-  const partnerDispatchTarget = useMemo(() => {
-    const partnerName = selectedProducts[0]?.vendor_name || 'Partenaire à confirmer';
-    const partnerLocality = selectedProducts[0]?.zone_label || 'Localité partenaire non fournie';
-    const customerLocality = deliveryAddress.trim()
-      ? deliveryAddress.trim().split(',')[0]?.trim() || 'Localité client non fournie'
-      : 'Localité client non fournie';
-
-    return {
-      partnerName,
-      partnerLocality,
-      customerLocality,
-    };
-  }, [deliveryAddress, selectedProducts]);
-
   const partnerDispatchMessage = useMemo(
     () =>
       buildPartnerDispatchMessage({
@@ -812,14 +804,11 @@ export function PublicHomePage() {
         customerName,
         customerPhone,
         deliveryAddress,
-        customerLocality: partnerDispatchTarget.customerLocality,
         deliveryNotes,
         customerMapsUrl: customerLocation?.mapsUrl,
         customerLat: customerLocation?.lat,
         customerLng: customerLocation?.lng,
         customerAccuracy: customerLocation?.accuracy,
-        partnerName: partnerDispatchTarget.partnerName,
-        partnerLocality: partnerDispatchTarget.partnerLocality,
       }),
     [
       customerLocation,
@@ -833,7 +822,6 @@ export function PublicHomePage() {
       paymentMethod,
       selectedProducts,
       selectionEconomics,
-      partnerDispatchTarget,
     ],
   );
 
@@ -875,6 +863,16 @@ export function PublicHomePage() {
 
   async function handlePartnerLeadSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!partnerLeadForm.phone.trim() || partnerLeadForm.phone.replace(/\D/g, '').length < 8) {
+      setPartnerStatus({ kind: 'error', message: 'Indiquez un numéro de téléphone valide (minimum 8 chiffres).' });
+      return;
+    }
+    if (!partnerLeadForm.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(partnerLeadForm.email.trim())) {
+      setPartnerStatus({ kind: 'error', message: 'Veuillez entrer un email valide.' });
+      return;
+    }
+
     setPartnerStatus({ kind: 'saving', message: 'Envoi de la demande partenaire...' });
 
     try {
@@ -1074,8 +1072,18 @@ export function PublicHomePage() {
       return;
     }
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      setCheckoutStatus({ kind: 'error', message: 'Nom et téléphone sont obligatoires pour confirmer la commande.' });
+    if (!customerName.trim()) {
+      setCheckoutStatus({ kind: 'error', message: 'Le nom est obligatoire pour confirmer la commande.' });
+      return;
+    }
+
+    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 8) {
+      setCheckoutStatus({ kind: 'error', message: 'Téléphone obligatoire (minimum 8 chiffres).' });
+      return;
+    }
+
+    if (!customerEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
+      setCheckoutStatus({ kind: 'error', message: 'Veuillez entrer un email valide.' });
       return;
     }
 
@@ -1325,6 +1333,8 @@ export function PublicHomePage() {
       total_amount: selectionEconomics.total_client,
       mode: fulfillmentMode,
     });
+    setSelectedProducts([]);
+    setTimeout(() => navigate('/mes-commandes?nouveau=1'), 1500);
   }
 
   async function requestNotifications() {
@@ -1914,6 +1924,7 @@ export function PublicHomePage() {
                         copyStatus={copyStatus}
                         customerName={customerName}
                         customerPhone={customerPhone}
+                        customerEmail={customerEmail}
                         deliveryAddress={deliveryAddress}
                         deliveryNotes={deliveryNotes}
                         deliverySlot={deliverySlot}
@@ -1933,6 +1944,7 @@ export function PublicHomePage() {
                         supabasePausedHint={supabasePausedHint}
                         onCustomerNameChange={setCustomerName}
                         onCustomerPhoneChange={setCustomerPhone}
+                        onCustomerEmailChange={setCustomerEmail}
                         onDeliveryAddressChange={setDeliveryAddress}
                         onDeliveryNotesChange={setDeliveryNotes}
                         onDeliverySlotChange={setDeliverySlot}
@@ -2507,6 +2519,7 @@ function SelectionPanel({
   copyStatus,
   customerName,
   customerPhone,
+  customerEmail,
   deliveryAddress,
   deliveryNotes,
   deliverySlot,
@@ -2526,6 +2539,7 @@ function SelectionPanel({
   supabasePausedHint,
   onCustomerNameChange,
   onCustomerPhoneChange,
+  onCustomerEmailChange,
   onDeliveryAddressChange,
   onDeliveryNotesChange,
   onDeliverySlotChange,
@@ -2560,6 +2574,7 @@ function SelectionPanel({
   copyStatus: string;
   customerName: string;
   customerPhone: string;
+  customerEmail: string;
   deliveryAddress: string;
   deliveryNotes: string;
   deliverySlot: string;
@@ -2579,6 +2594,7 @@ function SelectionPanel({
   supabasePausedHint: string | null;
   onCustomerNameChange: (value: string) => void;
   onCustomerPhoneChange: (value: string) => void;
+  onCustomerEmailChange: (value: string) => void;
   onDeliveryAddressChange: (value: string) => void;
   onDeliveryNotesChange: (value: string) => void;
   onDeliverySlotChange: (value: string) => void;
@@ -2679,8 +2695,16 @@ function SelectionPanel({
             <input
               value={customerPhone}
               onChange={(event) => onCustomerPhoneChange(event.target.value)}
-              placeholder="Téléphone"
+              placeholder="Téléphone (minimum 8 chiffres)"
               inputMode="tel"
+              className="rounded-2xl border border-orange-100 bg-white px-4 py-3 text-sm font-semibold text-[#2a190f] outline-none ring-orange-200 focus:ring-4"
+            />
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(event) => onCustomerEmailChange(event.target.value)}
+              placeholder="Email"
+              required
               className="rounded-2xl border border-orange-100 bg-white px-4 py-3 text-sm font-semibold text-[#2a190f] outline-none ring-orange-200 focus:ring-4"
             />
             <input

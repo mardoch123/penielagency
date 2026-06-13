@@ -17,10 +17,19 @@ serve(async (req) => {
     )
 
     const body = await req.json()
-    const { idempotency_key, items, total, commune, mode, phone, notes, creneaux, address } = body
+    const { idempotency_key, items, total, commune, mode, phone, notes, creneaux, address, email } = body
 
     if (!idempotency_key) {
       return new Response(JSON.stringify({ error: 'idempotency_key required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const phoneDigits = String(phone || '').replace(/\D/g, '')
+    if (phoneDigits.length < 8) {
+      return new Response(JSON.stringify({ error: 'Veuillez indiquer un numéro de téléphone valide (minimum 8 chiffres).' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return new Response(JSON.stringify({ error: 'Veuillez entrer un email valide.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Vérifier idempotence

@@ -1,40 +1,71 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno'
-
-const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || ''
-const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16', httpClient: Stripe.createFetchHttpClient() })
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import Stripe from "npm:stripe@19.3.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+};
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  apiVersion: "2024-11-20.acacia",
+});
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
 
   try {
-    const { amount, currency = 'eur', orderId } = await req.json()
+    const { amount, currency, orderId, vendorAccountId } = await req.json();
 
     if (!amount || amount <= 0) {
-      throw new Error('Montant invalide')
+      throw new Error("Invalid amount");
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
-      currency,
-      metadata: { orderId },
-      automatic_payment_methods: { enabled: true },
-    })
+    const paymentIntentData: Stripe.PaymentIntentCreateParams = {
+      amount,
+      currency: currency || "eur",
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        orderId: orderId || "",
+      },
+    };
 
-    return new Response(JSON.stringify({ clientSecret: paymentIntent.client_secret }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    if (vendorAccountId) {
+      paymentIntentData.application_fee_amount = Math.round(amount * 0.20);
+      paymentIntentData.transfer_data = {
+        destination: vendorAccountId,
+      };
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+    return new Response(
+      JSON.stringify({ clientSecret: paymentIntent.client_secret }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Payment intent error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Internal server error" }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   }
-})
+});

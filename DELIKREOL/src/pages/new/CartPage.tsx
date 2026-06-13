@@ -9,6 +9,7 @@ import {
   Minus,
   Trash2,
   MessageCircle,
+  Headphones,
   MapPin,
   ChefHat,
   Clock,
@@ -53,6 +54,10 @@ function formatPhoneError(): string {
   return 'Merci d\'indiquer un numéro WhatsApp valide, par exemple 0696 XX XX XX ou +596 696 XX XX XX.';
 }
 
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, total, itemCount } = useCart();
   const { showSuccess, showError } = useToast();
@@ -67,6 +72,8 @@ export default function CartPage() {
   const [notes, setNotes] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [messageSent, setMessageSent] = useState(false);
   const [preparedMessage, setPreparedMessage] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
@@ -83,6 +90,8 @@ export default function CartPage() {
     setNotes('');
     setPhone('');
     setPhoneError('');
+    setEmail('');
+    setEmailError('');
     showSuccess('Panier vidé');
   };
 
@@ -190,6 +199,13 @@ export default function CartPage() {
       return;
     }
 
+    // Validate email — obligatoire
+    if (!email || !validateEmail(email)) {
+      setEmailError('Veuillez entrer un email valide (ex : prenom@email.com).');
+      return;
+    }
+    setEmailError('');
+
     // Block multi-traiteur
     if (hasMultipleVendors) {
       showError('Pour cette version test, merci de passer une commande par partenaire. Le panier multi-traiteur arrive bientôt.');
@@ -257,10 +273,10 @@ export default function CartPage() {
     setMessageSent(true);
     clearCart();
     setPreparedMessage(
-      `Votre commande ${orderId} a été créée. Un récapitulatif vous est envoyé pour confirmation.`
+      `Votre commande ${orderId} a été enregistrée avec succès, votre panier a été vidé.`
     );
     showSuccess(`Commande ${orderId} créée !`);
-    setTimeout(() => navigate(`/statut-commande?order=${orderId}`), 1500);
+    setTimeout(() => navigate(`/mes-commandes?nouveau=1`), 1500);
   };
 
   useEffect(() => {
@@ -302,7 +318,7 @@ export default function CartPage() {
             <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 mb-6">
               <CheckCircle2 className="w-10 h-10 text-green-500" />
             </div>
-            <h1 className="text-2xl font-black text-gray-900 mb-3">Commande créée !</h1>
+            <h1 className="text-2xl font-black text-gray-900 mb-3">Commande enregistrée !</h1>
             {orderNumber && (
               <p className="text-3xl font-black text-orange-600 mb-2 font-mono">{orderNumber}</p>
             )}
@@ -310,17 +326,23 @@ export default function CartPage() {
               {preparedMessage}
             </p>
             <p className="text-sm text-gray-400 mb-8">
-              Besoin d'aide ? Contactez-nous sur WhatsApp.
+              Besoin d'aide ? Contactez notre équipe.
             </p>
             <div className="flex flex-col gap-3">
+              <Link
+                to="/mes-commandes?nouveau=1"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-all hover:scale-105"
+              >
+                Voir mes commandes
+              </Link>
               <a
                 href={`https://wa.me/596696653589?text=${encodeURIComponent(`Bonjour, j'ai besoin d'aide pour ma commande ${orderNumber}.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition-all hover:scale-105"
               >
-                <MessageCircle className="w-5 h-5" fill="white" />
-                Support commande
+                <Headphones className="w-5 h-5" />
+                Aide & Support
               </a>
               <Link
                 to="/catalogue"
@@ -558,36 +580,46 @@ export default function CartPage() {
                   )}
                 </div>
 
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError('');
+                    }}
+                    placeholder="votre@email.com"
+                    className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${
+                      emailError
+                        ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+                        : 'border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100'
+                    }`}
+                  />
+                  {emailError && (
+                    <p className="text-xs text-red-500 mt-1">{emailError}</p>
+                  )}
+                </div>
+
                 {/* Commune */}
-                <div className="relative">
+                <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">
                     <MapPin className="w-4 h-4 inline mr-1" />
                     Votre commune
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={commune}
-                    onChange={(e) => handleCommuneInput(e.target.value)}
-                    onFocus={() => communeSuggestions.length > 0 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    placeholder="Fort-de-France, Lamentin..."
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-sm outline-none"
-                  />
-                  {showSuggestions && communeSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-orange-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {communeSuggestions.map((name) => (
-                        <button
-                          key={name}
-                          type="button"
-                          onMouseDown={() => selectCommune(name)}
-                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50 transition-colors first:rounded-t-xl last:rounded-b-xl"
-                        >
-                          <MapPin className="w-3 h-3 inline mr-2 text-orange-400" />
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    onChange={(e) => setCommune(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-sm outline-none bg-white"
+                  >
+                    <option value="">— Choisir une commune —</option>
+                    {martiniqueCommunes.map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Mode */}
@@ -683,19 +715,26 @@ export default function CartPage() {
               </div>
 
               {/* Bouton principal — Supabase-first */}
-              {checkoutStatus === 'processing' ? (
-                <div className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-orange-400 text-white font-bold rounded-2xl text-lg">
-                  Création de votre commande...
-                </div>
-              ) : (
-                <button
-                  onClick={handleWhatsAppClick}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-all hover:scale-[1.02] shadow-lg shadow-orange-200 text-lg"
-                >
-                  <ShoppingCart className="w-6 h-6" />
-                  Confirmer ma commande
-                </button>
-              )}
+              <button
+                onClick={handleWhatsAppClick}
+                disabled={checkoutStatus === 'processing'}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white font-bold rounded-2xl transition-all hover:scale-[1.02] shadow-lg shadow-orange-200 text-lg"
+              >
+                {checkoutStatus === 'processing' ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Validation en cours...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-6 h-6" />
+                    Confirmer ma commande
+                  </>
+                )}
+              </button>
               <p className="text-xs text-center text-gray-400">
                 Vous ne payez pas encore en ligne. La commande est créée sur le site et confirmée par nos équipes. Besoin d'aide ? Contactez le support WhatsApp.
               </p>
