@@ -1,1 +1,0 @@
-function g(){const t=new Date,a=t.getFullYear(),e=String(t.getMonth()+1).padStart(2,"0"),o=String(t.getDate()).padStart(2,"0"),s=`${a}${e}${o}`,n="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",r=new Uint8Array(6);crypto.getRandomValues(r);const c=Array.from(r).map(d=>n[d%n.length]).join("");return`DK-${s}-${c}`}export{g};
