@@ -40,6 +40,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="DELIKREOL" />
     <link rel="apple-touch-icon" href="/penielagency/branding/app-icon.svg" />
+    <script>
+      window.onerror = function(msg, src, line, col, err) {
+        var d = document.getElementById('root');
+        if (d) d.innerHTML = '<div style="padding:16px;background:#ffe;border:2px solid red;font-family:monospace;word-break:break-all"><b>ERREUR JS:</b><br>' + msg + '<br><small>' + src + ':' + line + '</small></div>';
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        var d = document.getElementById('root');
+        if (d && !d.firstChild) d.innerHTML = '<div style="padding:16px;background:#ffe;border:2px solid orange;font-family:monospace;word-break:break-all"><b>PROMISE REJET:</b><br>' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)) + '</div>';
+      });
+    </script>
     <script type="module" crossorigin src="/penielagency/assets/index-B2XNyqfd.js"></script>
     <link rel="modulepreload" crossorigin href="/penielagency/assets/react-vendor-CTLweqPA.js">
     <link rel="modulepreload" crossorigin href="/penielagency/assets/map-vendor-DpbjYiR2.js">
