@@ -1,3 +1,5 @@
+import { lazy, Suspense } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
@@ -12,7 +14,11 @@ import { ProSpacePage } from './pages/ProSpacePage';
 import { PublicHomePage } from './pages/PublicHomePage';
 import { TraiteursPage } from './pages/TraiteursPage';
 
-function App() {
+const MesCommandesPage = lazy(() => import('./pages/new/MesCommandesPage'));
+
+const basePath = import.meta.env.VITE_BASE_PATH || import.meta.env.BASE_URL || '/';
+
+function AppContent() {
   const params = new URLSearchParams(window.location.search);
   const view = params.get('view');
   const pathname = window.location.pathname;
@@ -22,6 +28,10 @@ function App() {
   const effectivePathname = legacyPath || pathname;
   const isCustomerRoute = view === 'customer' || effectivePathname.endsWith('/customer');
   const isLegacyCustomerAppRoute = view === 'customer-app' || effectivePathname.endsWith('/customer-app');
+
+  if (view === 'mes-commandes') {
+    return <Suspense fallback={null}><MesCommandesPage /></Suspense>;
+  }
 
   const content = isLegacyCustomerAppRoute
     ? <CustomerApp />
@@ -43,13 +53,19 @@ function App() {
           ? <InvestorOpsPage />
           : <PublicHomePage />;
 
+  return <>{content}</>;
+}
+
+function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <CartProvider>
-          <ToastProvider>{content}</ToastProvider>
-        </CartProvider>
-      </AuthProvider>
+      <BrowserRouter basename={basePath}>
+        <AuthProvider>
+          <CartProvider>
+            <ToastProvider><AppContent /></ToastProvider>
+          </CartProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

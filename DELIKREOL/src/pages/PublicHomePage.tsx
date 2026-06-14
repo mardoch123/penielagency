@@ -52,7 +52,6 @@ import {
   trackPublicView,
 } from '../services/metricsService';
 import { useToast } from '../contexts/ToastContext';
-import { useNavigate } from 'react-router-dom';
 
 type CatalogState = {
   configured: boolean;
@@ -411,7 +410,6 @@ const defaultBusinessRequestForm: BusinessRequestForm = {
 };
 
 export function PublicHomePage() {
-  const navigate = useNavigate();
   const baseUrl = import.meta.env.BASE_URL || '/';
   const customerPath = `${baseUrl}?view=customer`;
   const proSpaceUrl = `${baseUrl}?view=pro`;
@@ -1334,7 +1332,7 @@ export function PublicHomePage() {
       mode: fulfillmentMode,
     });
     setSelectedProducts([]);
-    setTimeout(() => navigate('/mes-commandes?nouveau=1'), 1500);
+    setTimeout(() => { window.location.href = `${baseUrl}?view=mes-commandes&nouveau=1`; }, 1500);
   }
 
   async function requestNotifications() {
